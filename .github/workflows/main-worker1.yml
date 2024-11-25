@@ -1,0 +1,24 @@
+name: pinner-api
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: List output files
+        run: ls -la
+      - name: deploy        
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.4
+        with:
+          server: 20.86.34.83
+          username: ${{ secrets.SFTP_USER }}
+          ssh_private_key: ${{ secrets.KEY }}
+          local_path: './'
+          remote_path: "./pinner-api"
