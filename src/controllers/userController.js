@@ -1,5 +1,5 @@
 const { getDB } = require('../config/db');
-const { parse, validate } = require('@telegram-apps/init-data-node');
+const { parse } = require('@telegram-apps/init-data-node');
 const { generateToken } = require("../middlewares/auth")
 
 const login = async (req, res) => {
