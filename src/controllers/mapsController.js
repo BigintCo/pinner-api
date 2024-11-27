@@ -104,27 +104,4 @@ const nearMePlaces = async (req, res) => {
   }
 };
 
-const checkInPlace = async (req, res) => {
-  try {
-    var { place_id, content } = req.body;
-
-    if (!req.file) {
-      return res.status(400).send({ message: 'Fotoğraf yüklenmedi!' });
-    }
-
-    const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-
-    res.send({
-        message: 'Fotoğraf başarıyla yüklendi!',
-        fileUrl: fileUrl, // Yüklenen fotoğrafın URL'si,
-        a: req.body
-    });
-
-
-    //res.status(200).json(resVal);
-  } catch (error) {
-    res.status(500).json({ message: "Server Error", error });
-  }
-}
-
-module.exports = { nearMePlaces, checkInPlace };
+module.exports = { nearMePlaces };
