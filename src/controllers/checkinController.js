@@ -1,3 +1,4 @@
+const { ObjectId } = require('mongodb');
 const { getDB } = require('../config/db');
 
 async function checkIn(req, res, fileUrl) {
@@ -81,8 +82,37 @@ const getMyCheckIn = async(req, res) => {
 
 const likeCheckIn = async(req, res) => {
   try {
+    var { post_id } = req.body;
+
+    if (!post_id) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    if (post_id.toString().trim() === "") {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
     const db = getDB();
-    //......
+    var ci = await db.collection("check-in").findOne({ _id: new ObjectId(post_id.toString()) });
+    var thisUs = await db.collection("users").findOne({ id: req.user.id });
+    var thisUsLikedPosts = thisUs.likedPosts ?? [];
+    var status = 0;
+    var likers = ci.likers ?? [];
+    if(likers.includes(thisUs.id)) {
+      likers = likers.filter(function(item) { return item !== thisUs.id });
+      thisUsLikedPosts = thisUsLikedPosts.filter(function(item) { return item !== ci._id.toString() });
+      await db.collection("check-in").updateOne({ _id: new ObjectId(post_id.toString()) }, { $set: { likers: likers }});
+      await db.collection("users").updateOne({ _id: thisUs._id }, { $set: { likedPosts: thisUsLikedPosts }});
+      status = 0;
+    } else {
+      likers.push(thisUs.id);
+      thisUsLikedPosts.push(ci._id.toString());
+      await db.collection("check-in").updateOne({ _id: new ObjectId(post_id.toString()) }, { $set: { likers: likers }});
+      await db.collection("users").updateOne({ _id: thisUs._id }, { $set: { likedPosts: thisUsLikedPosts }});
+      status = 1;
+    }
+
+    res.status(200).json({ status: status === 1 ? "liked" : "disliked" });
   } catch (error) {
     res.status(500).json({ message: "Server Error", error });
   }
