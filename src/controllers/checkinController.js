@@ -62,8 +62,34 @@ const checkInPlaceWithPhoto = async (req, res) => {
 
 const getAllCheckIn = async(req, res) => {
   try {
+    const isOnlyPhoto = req.query.isOnlyPhoto ?? false;
+    const isOnlyText = req.query.isOnlyText ?? false;
+
     const db = getDB();
-    const ci = await db.collection("check-in").find().toArray();
+    var ci;
+
+    if (isOnlyPhoto) {
+      ci = await db.collection("check-in").aggregate([
+        {
+          $match: {
+            hasPhoto: true
+          }
+        }
+      ]).toArray();
+    } else {
+      if (isOnlyText) { 
+        ci = await db.collection("check-in").aggregate([
+          {
+            $match: {
+              hasPhoto: false
+            }
+          }
+        ]).toArray();
+      } else {
+        ci = await db.collection("check-in").find().toArray();
+      }
+    }
+
     res.status(200).json(ci);
   } catch (error) {
     res.status(500).json({ message: "Server Error", error });
@@ -74,6 +100,26 @@ const getMyCheckIn = async(req, res) => {
   try {
     const db = getDB();
     const ci = await db.collection("check-in").find({tg_user_id: req.user.id}).toArray();
+    res.status(200).json(ci);
+  } catch (error) {
+    res.status(500).json({ message: "Server Error", error });
+  }
+}
+
+const getUserCheckIn = async(req, res) => {
+  try {
+    var { tg_user_id } = req.query;
+
+    if (!tg_user_id) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    if (tg_user_id.toString().trim() === "") {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    const db = getDB();
+    const ci = await db.collection("check-in").find({tg_user_id: Number(tg_user_id)}).toArray();
     res.status(200).json(ci);
   } catch (error) {
     res.status(500).json({ message: "Server Error", error });
@@ -118,4 +164,4 @@ const likeCheckIn = async(req, res) => {
   }
 }
 
-module.exports = { checkInPlace, checkInPlaceWithPhoto, getAllCheckIn, getMyCheckIn, likeCheckIn };
+module.exports = { checkInPlace, checkInPlaceWithPhoto, getAllCheckIn, getMyCheckIn, likeCheckIn, getUserCheckIn };

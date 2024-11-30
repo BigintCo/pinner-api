@@ -51,7 +51,9 @@ const getUsers = async (req, res) => {
 
 const getUser = async (req, res) => {
   try {
-    res.status(200).json(req.user);
+    const db = getDB();
+    const user = await db.collection("users").findOne({ id: req.user.id });
+    res.status(200).json(user);
   } catch (error) {
     res.status(500).json({ message: "Server Error", error });
   }
