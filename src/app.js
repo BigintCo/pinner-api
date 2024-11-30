@@ -7,8 +7,15 @@ const checkInRoutes = require('./routes/checkinRoutes');
 const path = require('path');
 
 const app = express();
-
-app.use(cors());
+const corsOptions = {
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+    exposedHeaders: ['Content-Length', 'X-Kuma-Revision'],
+    preflightContinue: false,
+    optionsSuccessStatus: 204
+};
+app.use(cors(corsOptions));
 app.use(bodyParser.json());
 
 app.use('/api', userRoutes);
