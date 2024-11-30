@@ -20,18 +20,19 @@ const login = async (req, res) => {
     }
 
     const db = getDB();
-    var tUser = { };
     const existingUser = await db.collection("users").findOne({ id: parsedInitData.user.id });
     if (existingUser) {
-      tUser = existingUser;
-    } else {
-      var user = parsedInitData.user;
-      user.pinnerFirstLogin = new Date();
-      delete parsedInitData["user"];
-      user.initData = parsedInitData;
-      await db.collection("users").insertOne(user);
-      tUser = user;
+      if (existingUser.id) {
+        await db.collection("users").deleteOne({ id: existingUser.id });
+      }
     }
+
+    var user = parsedInitData.user;
+    user.pinnerFirstLogin = new Date();
+    delete parsedInitData["user"];
+    user.initData = parsedInitData;
+    await db.collection("users").insertOne(user);
+    var tUser = user;
 
     res.status(201).json({ token: generateToken(tUser) });
   } catch (error) {
