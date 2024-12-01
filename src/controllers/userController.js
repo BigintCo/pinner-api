@@ -1,5 +1,5 @@
 const { getDB } = require('../config/db');
-const { parse } = require('@telegram-apps/init-data-node');
+const { parse, validate } = require('@telegram-apps/init-data-node');
 const { generateToken } = require("../middlewares/auth");
 const { ObjectId } = require('mongodb');
 
@@ -14,7 +14,7 @@ const login = async (req, res) => {
     let parsedInitData = parse(initData);
 
     try {
-      validate(initData, process.env.TG_SECRET_TOKEN);
+      validate(initData, process.env.TG_SECRET_TOKEN, { expiresIn: 0 });
     } catch (e) {
       return res.status(401).json({ error: 'Token missing' });
     }

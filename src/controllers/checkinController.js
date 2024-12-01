@@ -293,4 +293,46 @@ const likeCheckIn = async(req, res) => {
   }
 }
 
-module.exports = { checkInPlace, checkInPlaceWithPhoto, getAllCheckIn, getMyCheckIn, likeCheckIn, getUserCheckIn };
+const getFollowingsCheckIn = async(req, res) => {
+  try {
+    const db = getDB();
+    var thisUs = await db.collection("users").findOne({ id: req.user.id });
+    const ci = await db.collection("check-in").aggregate([
+      {
+        $match: {
+          tg_user_id: {
+            $in: thisUs.followings
+          }
+        }
+      },
+      {
+        $lookup: {
+          from: "users",
+          let: {
+            tg_id: "$tg_user_id"
+          },
+          as: "user",
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: ["$$tg_id", "$id"]
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        $addFields: {
+          user: { $arrayElemAt: ["$user", 0] }
+        }
+      }
+    ]).toArray();
+    res.status(200).json(ci);
+  } catch (error) {
+    res.status(500).json({ message: "Server Error", error });
+  }
+}
+
+module.exports = { checkInPlace, checkInPlaceWithPhoto, getAllCheckIn, getMyCheckIn, likeCheckIn, getUserCheckIn, getFollowingsCheckIn };
