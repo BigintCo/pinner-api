@@ -140,12 +140,25 @@ const follow = async(req, res) => {
       thisUsFollwings = thisUsFollwings.filter(function(item) { return item !== us.id });
       await db.collection("users").updateOne({ id: Number(us.id) }, { $set: { followers: followers }});
       await db.collection("users").updateOne({ id: Number(thisUs.id) }, { $set: { followings: thisUsFollwings }});
+      await db.collection("notifications").deleteOne({
+        post_id: '',
+        receiver: us.id,
+        sender: thisUs.id,
+        notification_type: "follow",
+      });
       status = 0;
     } else {
       followers.push(thisUs.id);
       thisUsFollwings.push(us.id);
       await db.collection("users").updateOne({ id: Number(us.id) }, { $set: { followers: followers }});
       await db.collection("users").updateOne({ id: Number(thisUs.id) }, { $set: { followings: thisUsFollwings }});
+      await db.collection("notifications").insertOne({
+        post_id: '',
+        receiver: us.id,
+        sender: thisUs.id,
+        notification_type: "follow",
+        notification_date: new Date(),
+      });
       status = 1;
     }
 
@@ -244,4 +257,106 @@ const getLikedPosts = async(req, res) => {
   }
 }
 
-module.exports = { getUsers, getUser, login, follow, getFollowers, getFollowings, getLikedPosts, searchUsers };
+const getNotifications = async(req, res) => {
+  try {
+    const db = getDB();
+    const nots = await db.collection("notifications").aggregate([
+      {
+        $match: {
+          receiver: req.user.id
+        }
+      },
+      {
+        $lookup: {
+          from: "users",
+          let: {
+            r: "$receiver"
+          },
+          as: "receiver_user",
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: ["$$r", "$id"]
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        $addFields: {
+          receiver_user: {
+            $arrayElemAt: ["$receiver_user", 0]
+          }
+        }
+      },
+      {
+        $lookup: {
+          from: "users",
+          let: {
+            r: "$sender"
+          },
+          as: "sender_user",
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: ["$$r", "$id"]
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        $addFields: {
+          sender_user: {
+            $arrayElemAt: ["$sender_user", 0]
+          }
+        }
+      },
+      {
+        $lookup: {
+          from: "check-in",
+          let: {
+            r: "$post_id"
+          },
+          as: "post",
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: [
+                    {
+                      $convert: {
+                        input: "$$r",
+                        to: "objectId",
+                        onError: null,
+                        onNull: null
+                      }
+                    },
+                    "$_id"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        $addFields: {
+          post: {
+            $arrayElemAt: ["$post", 0]
+          }
+        }
+      }
+    ]).toArray();
+
+    res.status(200).json(nots);
+  } catch (error) {
+    res.status(500).json({ message: "Server Error", error });
+  }
+}
+
+module.exports = { getUsers, getUser, login, follow, getFollowers, getFollowings, getLikedPosts, searchUsers, getNotifications };

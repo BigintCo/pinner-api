@@ -307,12 +307,25 @@ const likeCheckIn = async(req, res) => {
       thisUsLikedPosts = thisUsLikedPosts.filter(function(item) { return item !== ci._id.toString() });
       await db.collection("check-in").updateOne({ _id: new ObjectId(post_id.toString()) }, { $set: { likers: likers }});
       await db.collection("users").updateOne({ _id: thisUs._id }, { $set: { likedPosts: thisUsLikedPosts }});
+      await db.collection("notifications").deleteOne({
+        post_id: ci._id.toString(),
+        receiver: ci.tg_user_id,
+        sender: thisUs.id,
+        notification_type: "like",
+      });
       status = 0;
     } else {
       likers.push(thisUs.id);
       thisUsLikedPosts.push(ci._id.toString());
       await db.collection("check-in").updateOne({ _id: new ObjectId(post_id.toString()) }, { $set: { likers: likers }});
       await db.collection("users").updateOne({ _id: thisUs._id }, { $set: { likedPosts: thisUsLikedPosts }});
+      await db.collection("notifications").insertOne({
+        post_id: ci._id.toString(),
+        receiver: ci.tg_user_id,
+        sender: thisUs.id,
+        notification_type: "like",
+        notification_date: new Date(),
+      });
       status = 1;
     }
 
@@ -395,6 +408,13 @@ const commentCheckIn = async(req, res) => {
       comment_date: new Date(),
     });
     await db.collection("check-in").updateOne({ _id: new ObjectId(post_id.toString()) }, { $set: { comments: comments }});
+    await db.collection("notifications").insertOne({
+      post_id: ci._id.toString(),
+      receiver: ci.tg_user_id,
+      sender: req.user.id,
+      notification_type: "comment",
+      notification_date: new Date(),
+    });
 
     res.status(200).json({ status: "commented" });
   } catch (error) {
