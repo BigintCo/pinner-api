@@ -161,6 +161,15 @@ const getAllCheckIn = async(req, res) => {
       }
     }
 
+    for (let i = 0; i < ci.length; i++) {
+      const e = ci[i];
+      for (let j = 0; j < (e.comments ?? []).length; j++) {
+        const a = e.comments[j];
+        const user = await db.collection("users").findOne({ id: a.tg_user_id });
+        ci[i].comments[j].user = user;
+      }
+    }
+
     res.status(200).json(ci);
   } catch (error) {
     res.status(500).json({ message: "Server Error", error });
@@ -200,6 +209,16 @@ const getMyCheckIn = async(req, res) => {
         }
       }
     ]).toArray();
+
+    for (let i = 0; i < ci.length; i++) {
+      const e = ci[i];
+      for (let j = 0; j < (e.comments ?? []).length; j++) {
+        const a = e.comments[j];
+        const user = await db.collection("users").findOne({ id: a.tg_user_id });
+        ci[i].comments[j].user = user;
+      }
+    }
+
     res.status(200).json(ci);
   } catch (error) {
     res.status(500).json({ message: "Server Error", error });
@@ -249,6 +268,16 @@ const getUserCheckIn = async(req, res) => {
         }
       }
     ]).toArray();
+
+    for (let i = 0; i < ci.length; i++) {
+      const e = ci[i];
+      for (let j = 0; j < (e.comments ?? []).length; j++) {
+        const a = e.comments[j];
+        const user = await db.collection("users").findOne({ id: a.tg_user_id });
+        ci[i].comments[j].user = user;
+      }
+    }
+
     res.status(200).json(ci);
   } catch (error) {
     res.status(500).json({ message: "Server Error", error });
@@ -329,10 +358,48 @@ const getFollowingsCheckIn = async(req, res) => {
         }
       }
     ]).toArray();
+
+    for (let i = 0; i < ci.length; i++) {
+      const e = ci[i];
+      for (let j = 0; j < (e.comments ?? []).length; j++) {
+        const a = e.comments[j];
+        const user = await db.collection("users").findOne({ id: a.tg_user_id });
+        ci[i].comments[j].user = user;
+      }
+    }
+
     res.status(200).json(ci);
   } catch (error) {
     res.status(500).json({ message: "Server Error", error });
   }
 }
 
-module.exports = { checkInPlace, checkInPlaceWithPhoto, getAllCheckIn, getMyCheckIn, likeCheckIn, getUserCheckIn, getFollowingsCheckIn };
+const commentCheckIn = async(req, res) => {
+  try {
+    var { post_id, content } = req.body;
+
+    if (!post_id || !content) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    if (post_id.toString().trim() === "" || content.toString().trim() === "") {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    const db = getDB();
+    var ci = await db.collection("check-in").findOne({ _id: new ObjectId(post_id.toString()) });
+    var comments = ci.comments ?? [];
+    comments.push({
+      content: content,
+      tg_user_id: req.user.id,
+      comment_date: new Date(),
+    });
+    await db.collection("check-in").updateOne({ _id: new ObjectId(post_id.toString()) }, { $set: { comments: comments }});
+
+    res.status(200).json({ status: "commented" });
+  } catch (error) {
+    res.status(500).json({ message: "Server Error", error });
+  }
+}
+
+module.exports = { checkInPlace, checkInPlaceWithPhoto, getAllCheckIn, getMyCheckIn, likeCheckIn, getUserCheckIn, getFollowingsCheckIn, commentCheckIn };
