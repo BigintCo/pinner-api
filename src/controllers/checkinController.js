@@ -26,6 +26,7 @@ async function checkIn(req, res, fileUrl) {
     var checkIn = {
       place: JSON.parse(place.toString()),
       tg_user_id: user.id,
+      checkin_date: new Date(),
       content: content,
       hasPhoto: fileUrl.trim() === "" ? false : true,
       photoURI: fileUrl
@@ -74,6 +75,29 @@ const getAllCheckIn = async(req, res) => {
           $match: {
             hasPhoto: true
           }
+        },
+        {
+          $lookup: {
+            from: "users",
+            let: {
+              tg_id: "$tg_user_id"
+            },
+            as: "user",
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $eq: ["$$tg_id", "$id"]
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          $addFields: {
+            user: { $arrayElemAt: ["$user", 0] }
+          }
         }
       ]).toArray();
     } else {
@@ -83,10 +107,57 @@ const getAllCheckIn = async(req, res) => {
             $match: {
               hasPhoto: false
             }
+          },
+          {
+            $lookup: {
+              from: "users",
+              let: {
+                tg_id: "$tg_user_id"
+              },
+              as: "user",
+              pipeline: [
+                {
+                  $match: {
+                    $expr: {
+                      $eq: ["$$tg_id", "$id"]
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            $addFields: {
+              user: { $arrayElemAt: ["$user", 0] }
+            }
           }
         ]).toArray();
       } else {
-        ci = await db.collection("check-in").find().toArray();
+        ci = await db.collection("check-in").aggregate([
+          {
+            $lookup: {
+              from: "users",
+              let: {
+                tg_id: "$tg_user_id"
+              },
+              as: "user",
+              pipeline: [
+                {
+                  $match: {
+                    $expr: {
+                      $eq: ["$$tg_id", "$id"]
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            $addFields: {
+              user: { $arrayElemAt: ["$user", 0] }
+            }
+          }
+        ]).toArray();
       }
     }
 
@@ -99,7 +170,36 @@ const getAllCheckIn = async(req, res) => {
 const getMyCheckIn = async(req, res) => {
   try {
     const db = getDB();
-    const ci = await db.collection("check-in").find({tg_user_id: req.user.id}).toArray();
+    const ci = await db.collection("check-in").aggregate([
+      {
+        $match: {
+          tg_user_id: req.user.id
+        }
+      },
+      {
+        $lookup: {
+          from: "users",
+          let: {
+            tg_id: "$tg_user_id"
+          },
+          as: "user",
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: ["$$tg_id", "$id"]
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        $addFields: {
+          user: { $arrayElemAt: ["$user", 0] }
+        }
+      }
+    ]).toArray();
     res.status(200).json(ci);
   } catch (error) {
     res.status(500).json({ message: "Server Error", error });
@@ -119,7 +219,36 @@ const getUserCheckIn = async(req, res) => {
     }
 
     const db = getDB();
-    const ci = await db.collection("check-in").find({tg_user_id: Number(tg_user_id)}).toArray();
+    const ci = await db.collection("check-in").aggregate([
+      {
+        $match: {
+          tg_user_id: Number(tg_user_id)
+        }
+      },
+      {
+        $lookup: {
+          from: "users",
+          let: {
+            tg_id: "$tg_user_id"
+          },
+          as: "user",
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: ["$$tg_id", "$id"]
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        $addFields: {
+          user: { $arrayElemAt: ["$user", 0] }
+        }
+      }
+    ]).toArray();
     res.status(200).json(ci);
   } catch (error) {
     res.status(500).json({ message: "Server Error", error });
