@@ -1,5 +1,5 @@
 const express = require('express');
-const { getUser, getUsers, login, follow, getFollowers, getFollowings, getLikedPosts } = require('../controllers/userController');
+const { getUser, getUsers, login, follow, getFollowers, getFollowings, getLikedPosts, searchUsers } = require('../controllers/userController');
 const { authenticateToken } = require('../middlewares/auth');
 const router = express.Router();
 
@@ -10,5 +10,6 @@ router.post('/users/follow', authenticateToken, follow);
 router.get('/users/followings', authenticateToken, getFollowings);
 router.get('/users/followers', authenticateToken, getFollowers);
 router.get('/users/likedPosts', authenticateToken, getLikedPosts);
+router.get('/users/search', authenticateToken, searchUsers);
 
 module.exports = router;

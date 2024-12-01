@@ -58,6 +58,55 @@ const getUsers = async (req, res) => {
   }
 };
 
+const searchUsers = async (req, res) => {
+  try {
+    var { text } = req.query;
+
+    if (!text) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    if (text.toString().trim() === "") {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    console.log(text.length);
+    if(text.length === 10) {
+      try {
+        text = Number(text);
+      } catch (error) { }
+    }
+
+    const db = getDB();
+    const users = await db.collection("users").aggregate([
+      {
+        $match: {
+          $or: [
+            {
+              firstName: {
+                $regex: text.toString(),
+                $options: "i"
+              }
+            },
+            {
+              lastName: {
+                $regex: text.toString(),
+                $options: "i"
+              }
+            },
+            {
+              id: text
+            }
+          ]
+        }
+      }
+    ]).toArray();
+    res.status(200).json(users);
+  } catch (error) {
+    res.status(500).json({ message: "Server Error", error });
+  }
+};
+
 const getUser = async (req, res) => {
   try {
     const db = getDB();
@@ -195,4 +244,4 @@ const getLikedPosts = async(req, res) => {
   }
 }
 
-module.exports = { getUsers, getUser, login, follow, getFollowers, getFollowings, getLikedPosts };
+module.exports = { getUsers, getUser, login, follow, getFollowers, getFollowings, getLikedPosts, searchUsers };
