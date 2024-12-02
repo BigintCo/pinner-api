@@ -70,7 +70,6 @@ const searchUsers = async (req, res) => {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    console.log(text.length);
     if(text.length === 10) {
       try {
         text = Number(text);
@@ -111,6 +110,26 @@ const getUser = async (req, res) => {
   try {
     const db = getDB();
     const user = await db.collection("users").findOne({ id: req.user.id });
+    res.status(200).json(user);
+  } catch (error) {
+    res.status(500).json({ message: "Server Error", error });
+  }
+};
+
+const getUserById = async (req, res) => {
+  try {
+    var { tg_user_id } = req.query;
+
+    if (!tg_user_id) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    if (tg_user_id.toString().trim() === "") {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    const db = getDB();
+    const user = await db.collection("users").findOne({ id: Number(tg_user_id) });
     res.status(200).json(user);
   } catch (error) {
     res.status(500).json({ message: "Server Error", error });
@@ -359,4 +378,4 @@ const getNotifications = async(req, res) => {
   }
 }
 
-module.exports = { getUsers, getUser, login, follow, getFollowers, getFollowings, getLikedPosts, searchUsers, getNotifications };
+module.exports = { getUsers, getUser, login, follow, getFollowers, getFollowings, getLikedPosts, searchUsers, getNotifications, getUserById };
