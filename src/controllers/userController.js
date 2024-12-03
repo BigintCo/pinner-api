@@ -2,6 +2,7 @@ const { getDB } = require('../config/db');
 const { parse, validate } = require('@telegram-apps/init-data-node');
 const { generateToken } = require("../middlewares/auth");
 const { ObjectId } = require('mongodb');
+const { Address } = require('@ton/core');
 
 const login = async (req, res) => {
   try {
@@ -135,6 +136,41 @@ const getUserById = async (req, res) => {
     res.status(500).json({ message: "Server Error", error });
   }
 };
+
+const connectWallet = async(req, res) => {
+  try {
+    var { walletAddress } = req.body;
+
+    if (!walletAddress) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    if (walletAddress.toString().trim() === "") {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    try {
+      if (!Address.isAddress(Address.parse(walletAddress))) {
+        return res.status(400).json({ message: "Wallet address not valid" });
+      }
+    } catch (error) {
+      return res.status(400).json({ message: "Wallet address not valid" });
+    }
+
+    if(!Address.isRaw(walletAddress)) {
+      walletAddress = Address.parse(walletAddress).toRawString();
+    }
+
+    const db = getDB();
+    var thisUs = await db.collection("users").findOne({ id: Number(req.user.id) });
+    await db.collection("users").updateOne({ id: Number(thisUs.id) }, { $set: { walletAddress: walletAddress.toUpperCase() }});
+    var upUs = await db.collection("users").findOne({ id: Number(req.user.id) });
+
+    res.status(200).json(upUs);
+  } catch (error) {
+    res.status(500).json({ message: "Server Error", error });
+  }
+}
 
 const follow = async(req, res) => {
   try {
@@ -378,4 +414,4 @@ const getNotifications = async(req, res) => {
   }
 }
 
-module.exports = { getUsers, getUser, login, follow, getFollowers, getFollowings, getLikedPosts, searchUsers, getNotifications, getUserById };
+module.exports = { getUsers, getUser, login, follow, getFollowers, getFollowings, getLikedPosts, searchUsers, getNotifications, getUserById, connectWallet };
