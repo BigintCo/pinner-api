@@ -163,6 +163,9 @@ const connectWallet = async(req, res) => {
 
     const db = getDB();
     var thisUs = await db.collection("users").findOne({ id: Number(req.user.id) });
+    if(!thisUs.walletAddress) {
+      incermentUserScore(req.user.id, 333);
+    }
     await db.collection("users").updateOne({ id: Number(thisUs.id) }, { $set: { walletAddress: walletAddress.toUpperCase() }});
     var upUs = await db.collection("users").findOne({ id: Number(req.user.id) });
 
@@ -207,6 +210,7 @@ const follow = async(req, res) => {
       thisUsFollwings.push(us.id);
       await db.collection("users").updateOne({ id: Number(us.id) }, { $set: { followers: followers }});
       await db.collection("users").updateOne({ id: Number(thisUs.id) }, { $set: { followings: thisUsFollwings }});
+      incermentUserScore(us.id, 999);
       await db.collection("notifications").insertOne({
         post_id: '',
         receiver: us.id,
@@ -414,4 +418,17 @@ const getNotifications = async(req, res) => {
   }
 }
 
-module.exports = { getUsers, getUser, login, follow, getFollowers, getFollowings, getLikedPosts, searchUsers, getNotifications, getUserById, connectWallet };
+const incermentUserScore = async(tg_user_id, score) => {
+  try {
+    const db = getDB();
+    var thisUs = await db.collection("users").findOne({ id: Number(tg_user_id) });
+    var usScore = thisUs.ton_pinner_score ?? 0;
+    usScore = usScore + score;
+    await db.collection("users").updateOne({ id: Number(thisUs.id) }, { $set: { ton_pinner_score: usScore }});
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+module.exports = { getUsers, getUser, login, follow, getFollowers, getFollowings, getLikedPosts, searchUsers, getNotifications, getUserById, connectWallet, incermentUserScore };

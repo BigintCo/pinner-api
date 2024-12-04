@@ -1,9 +1,10 @@
 const { ObjectId } = require('mongodb');
 const { getDB } = require('../config/db');
+const { incermentUserScore } = require('./userController');
 
 async function checkIn(req, res, fileUrl) {
   try {
-    var { place, content } = req.body;
+    var { place, content, used_badge } = req.body;
     var user = req.user;
 
     if (!place || !content) {
@@ -22,15 +23,32 @@ async function checkIn(req, res, fileUrl) {
       place = JSON.stringify(place);
     }
 
+    if(used_badge && used_badge.name) {
+      //used_badge = JSON.stringify(used_badge);
+    } else {
+      if(used_badge) {
+        used_badge = JSON.parse(used_badge.toString());
+      }
+    }
+
+    const hasPhoto = fileUrl.trim() === "" ? false : true;
+
     const db = getDB();
     var checkIn = {
       place: JSON.parse(place.toString()),
       tg_user_id: user.id,
       checkin_date: new Date(),
       content: content,
-      hasPhoto: fileUrl.trim() === "" ? false : true,
+      hasPhoto: hasPhoto,
       photoURI: fileUrl
     }
+    if(used_badge && (used_badge.name ?? "").includes("Welcome to Pinner")) {
+        checkIn.used_badge = used_badge;
+        incermentUserScore(user.id, hasPhoto ? 777 : 555);
+    } else {
+      incermentUserScore(user.id, hasPhoto ? 222: 111);
+    }
+
     await db.collection("check-in").insertOne(checkIn);
 
     return res.status(200).json(checkIn);
@@ -319,6 +337,7 @@ const likeCheckIn = async(req, res) => {
       thisUsLikedPosts.push(ci._id.toString());
       await db.collection("check-in").updateOne({ _id: new ObjectId(post_id.toString()) }, { $set: { likers: likers }});
       await db.collection("users").updateOne({ _id: thisUs._id }, { $set: { likedPosts: thisUsLikedPosts }});
+      incermentUserScore(ci.tg_user_id, 44);
       await db.collection("notifications").insertOne({
         post_id: ci._id.toString(),
         receiver: ci.tg_user_id,
@@ -415,6 +434,7 @@ const commentCheckIn = async(req, res) => {
       notification_type: "comment",
       notification_date: new Date(),
     });
+    incermentUserScore(ci.tg_user_id, 88);
 
     res.status(200).json({ status: "commented" });
   } catch (error) {
