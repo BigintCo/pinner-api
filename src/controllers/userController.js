@@ -307,6 +307,54 @@ const getLikedPosts = async(req, res) => {
         $match: {
           _id: { $in: likedPosts }
         }
+      },
+      {
+        $lookup: {
+          from: "users",
+          let: {
+            tg_id: "$tg_user_id"
+          },
+          as: "user",
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: ["$$tg_id", "$id"]
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        $addFields: {
+          user: { $arrayElemAt: ["$user", 0] },
+          boosterCount: {
+            $size: { $ifNull: ["$boosters", []] }
+          },
+          hasCheckinDate: {
+            $cond: {
+              if: {
+                $ifNull: ["$checkin_date", false]
+              },
+              then: 1,
+              else: 0
+            }
+          }
+        }
+      },
+      {
+        $sort: {
+          hasCheckinDate: -1,
+          boosterCount: -1,
+          checkin_date: -1
+        }
+      },
+      {
+        $project: {
+          boosterCount: 0,
+          hasCheckinDate: 0
+        }
       }
     ]).toArray();
 

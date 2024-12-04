@@ -114,7 +114,32 @@ const getAllCheckIn = async(req, res) => {
         },
         {
           $addFields: {
-            user: { $arrayElemAt: ["$user", 0] }
+            user: { $arrayElemAt: ["$user", 0] },
+            boosterCount: {
+              $size: { $ifNull: ["$boosters", []] }
+            },
+            hasCheckinDate: {
+              $cond: {
+                if: {
+                  $ifNull: ["$checkin_date", false]
+                },
+                then: 1,
+                else: 0
+              }
+            }
+          }
+        },
+        {
+          $sort: {
+            hasCheckinDate: -1,
+            boosterCount: -1,
+            checkin_date: -1
+          }
+        },
+        {
+          $project: {
+            boosterCount: 0,
+            hasCheckinDate: 0
           }
         }
       ]).toArray();
@@ -146,7 +171,32 @@ const getAllCheckIn = async(req, res) => {
           },
           {
             $addFields: {
-              user: { $arrayElemAt: ["$user", 0] }
+              user: { $arrayElemAt: ["$user", 0] },
+              boosterCount: {
+                $size: { $ifNull: ["$boosters", []] }
+              },
+              hasCheckinDate: {
+                $cond: {
+                  if: {
+                    $ifNull: ["$checkin_date", false]
+                  },
+                  then: 1,
+                  else: 0
+                }
+              }
+            }
+          },
+          {
+            $sort: {
+              hasCheckinDate: -1,
+              boosterCount: -1,
+              checkin_date: -1
+            }
+          },
+          {
+            $project: {
+              boosterCount: 0,
+              hasCheckinDate: 0
             }
           }
         ]).toArray();
@@ -172,7 +222,32 @@ const getAllCheckIn = async(req, res) => {
           },
           {
             $addFields: {
-              user: { $arrayElemAt: ["$user", 0] }
+              user: { $arrayElemAt: ["$user", 0] },
+              boosterCount: {
+                $size: { $ifNull: ["$boosters", []] }
+              },
+              hasCheckinDate: {
+                $cond: {
+                  if: {
+                    $ifNull: ["$checkin_date", false]
+                  },
+                  then: 1,
+                  else: 0
+                }
+              }
+            }
+          },
+          {
+            $sort: {
+              hasCheckinDate: -1,
+              boosterCount: -1,
+              checkin_date: -1
+            }
+          },
+          {
+            $project: {
+              boosterCount: 0,
+              hasCheckinDate: 0
             }
           }
         ]).toArray();
@@ -223,7 +298,32 @@ const getMyCheckIn = async(req, res) => {
       },
       {
         $addFields: {
-          user: { $arrayElemAt: ["$user", 0] }
+          user: { $arrayElemAt: ["$user", 0] },
+          boosterCount: {
+            $size: { $ifNull: ["$boosters", []] }
+          },
+          hasCheckinDate: {
+            $cond: {
+              if: {
+                $ifNull: ["$checkin_date", false]
+              },
+              then: 1,
+              else: 0
+            }
+          }
+        }
+      },
+      {
+        $sort: {
+          hasCheckinDate: -1,
+          boosterCount: -1,
+          checkin_date: -1
+        }
+      },
+      {
+        $project: {
+          boosterCount: 0,
+          hasCheckinDate: 0
         }
       }
     ]).toArray();
@@ -282,7 +382,32 @@ const getUserCheckIn = async(req, res) => {
       },
       {
         $addFields: {
-          user: { $arrayElemAt: ["$user", 0] }
+          user: { $arrayElemAt: ["$user", 0] },
+          boosterCount: {
+            $size: { $ifNull: ["$boosters", []] }
+          },
+          hasCheckinDate: {
+            $cond: {
+              if: {
+                $ifNull: ["$checkin_date", false]
+              },
+              then: 1,
+              else: 0
+            }
+          }
+        }
+      },
+      {
+        $sort: {
+          hasCheckinDate: -1,
+          boosterCount: -1,
+          checkin_date: -1
+        }
+      },
+      {
+        $project: {
+          boosterCount: 0,
+          hasCheckinDate: 0
         }
       }
     ]).toArray();
@@ -386,7 +511,32 @@ const getFollowingsCheckIn = async(req, res) => {
       },
       {
         $addFields: {
-          user: { $arrayElemAt: ["$user", 0] }
+          user: { $arrayElemAt: ["$user", 0] },
+          boosterCount: {
+            $size: { $ifNull: ["$boosters", []] }
+          },
+          hasCheckinDate: {
+            $cond: {
+              if: {
+                $ifNull: ["$checkin_date", false]
+              },
+              then: 1,
+              else: 0
+            }
+          }
+        }
+      },
+      {
+        $sort: {
+          hasCheckinDate: -1,
+          boosterCount: -1,
+          checkin_date: -1
+        }
+      },
+      {
+        $project: {
+          boosterCount: 0,
+          hasCheckinDate: 0
         }
       }
     ]).toArray();
@@ -442,4 +592,61 @@ const commentCheckIn = async(req, res) => {
   }
 }
 
-module.exports = { checkInPlace, checkInPlaceWithPhoto, getAllCheckIn, getMyCheckIn, likeCheckIn, getUserCheckIn, getFollowingsCheckIn, commentCheckIn };
+const boostCheckIn = async(req, res) => {
+  try {
+    var { post_id } = req.body;
+
+    if (!post_id) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    if (post_id.toString().trim() === "") {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    const db = getDB();
+    var ci = await db.collection("check-in").findOne({ _id: new ObjectId(post_id.toString()) });
+    var thisUs = await db.collection("users").findOne({ id: req.user.id });
+
+    if (!(thisUs.ton_pinner_premium ?? false)) {
+      return res.status(400).json({ message: "Only premium users can use boost" });
+    }
+     
+    var thisUsBoostedPosts = thisUs.boostedPosts ?? [];
+    var status = 0;
+    var boosters = ci.boosters ?? [];
+    if(boosters.includes(thisUs.id)) {
+      boosters = boosters.filter(function(item) { return item !== thisUs.id });
+      thisUsBoostedPosts = thisUsBoostedPosts.filter(function(item) { return item !== ci._id.toString() });
+      await db.collection("check-in").updateOne({ _id: new ObjectId(post_id.toString()) }, { $set: { boosters: boosters }});
+      await db.collection("users").updateOne({ _id: thisUs._id }, { $set: { boostedPosts: thisUsBoostedPosts }});
+      await db.collection("notifications").deleteOne({
+        post_id: ci._id.toString(),
+        receiver: ci.tg_user_id,
+        sender: thisUs.id,
+        notification_type: "boost",
+      });
+      status = 0;
+    } else {
+      boosters.push(thisUs.id);
+      thisUsBoostedPosts.push(ci._id.toString());
+      await db.collection("check-in").updateOne({ _id: new ObjectId(post_id.toString()) }, { $set: { boosters: boosters }});
+      await db.collection("users").updateOne({ _id: thisUs._id }, { $set: { boostedPosts: thisUsBoostedPosts }});
+      incermentUserScore(ci.tg_user_id, 2222);
+      await db.collection("notifications").insertOne({
+        post_id: ci._id.toString(),
+        receiver: ci.tg_user_id,
+        sender: thisUs.id,
+        notification_type: "boost",
+        notification_date: new Date(),
+      });
+      status = 1;
+    }
+
+    res.status(200).json({ status: status === 1 ? "boosted" : "unboosted" });
+  } catch (error) {
+    res.status(500).json({ message: "Server Error", error });
+  }
+}
+
+module.exports = { checkInPlace, checkInPlaceWithPhoto, getAllCheckIn, getMyCheckIn, likeCheckIn, getUserCheckIn, getFollowingsCheckIn, commentCheckIn, boostCheckIn };
